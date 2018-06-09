@@ -1,0 +1,12 @@
+package: .
+import:
+- package: github.com/PuerkitoBio/goquery
+- package: golang.org/x/text
+- package: golang.org/x/net
+  subpackages:
+  - html
+- package: github.com/andybalholm/cascadia
+- package: github.com/jinzhu/gorm
+  subpackages:
+  - dialects/mysql
+- package: github.com/go-sql-driver/mysql
