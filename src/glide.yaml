@@ -10,3 +10,7 @@ import:
   subpackages:
   - dialects/mysql
 - package: github.com/go-sql-driver/mysql
+- package: github.com/chromedp/chromedp
+- package: github.com/chromedp/cdproto
+  subpackages:
+  - cdp

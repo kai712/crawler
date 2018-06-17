@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"crawler.github.com/crawler"
 	"crawler.github.com/models"
 	"github.com/chromedp/chromedp"
 	"github.com/jinzhu/gorm"
@@ -13,7 +14,7 @@ import (
 
 const (
 	baseURL = "https://www.qimai.cn/andapp/baseinfo/appid/"
-	count   = 5
+	count   = 20
 )
 
 var page = 1
@@ -31,16 +32,19 @@ func Work(db *gorm.DB) {
 		log.Panicf("create chrome instance error: %s", err)
 	}
 
-	// var wg sync.WaitGroup
+	for {
+		// open chrome target
+		// c, err := chromedp.New(ctxt, chromedp.WithTargets(client.New().WatchPageTargets(ctxt)))
+		// if err != nil {
+		// 	log.Panicf("open chrome target error: %s", err)
+		// }
 
-	for i := 0; i < count; i++ {
-		// wg.Add(1)
-
-		task(c, &ctxt, page, db)
+		if isBreak := task(c, &ctxt, page, db); isBreak {
+			break
+		}
 
 		page++
 	}
-	// wg.Wait()
 
 	// remove chrome instance
 	if err := closeChrome(c, &ctxt); err != nil {
@@ -51,7 +55,7 @@ func Work(db *gorm.DB) {
 
 // openChrome create chrome instance
 func openChrome(ctxt context.Context) (*chromedp.CDP, error) {
-	c, err := chromedp.New(ctxt, chromedp.WithLog(log.Printf))
+	c, err := chromedp.New(ctxt)
 	if err != nil {
 		return c, err
 	}
@@ -71,43 +75,49 @@ func closeChrome(c *chromedp.CDP, ctxt *context.Context) error {
 	return nil
 }
 
-// task parse web page
-func task(c *chromedp.CDP, ctxt *context.Context, page int, db *gorm.DB) {
+// task
+func task(c *chromedp.CDP, ctxt *context.Context, page int, db *gorm.DB) (isBreak bool) {
+	isBreak = false
 	result := models.APP{}
+	url := fmt.Sprintf(`%s%d`, baseURL, page)
 
-	// defer wg.Done()
-
-	err := c.Run(*ctxt, chromedp.Tasks{
-		chromedp.Navigate(fmt.Sprintf(`%s%d`, baseURL, page)),
-		chromedp.WaitVisible(`#appMain`, chromedp.ByID),
-		chromedp.Text(`.breadcrumb-wrap>ul li:nth-child(5)`, &result.Name, chromedp.NodeVisible, chromedp.ByQuery),
-		chromedp.Text(`.app-header .auther .value`, &result.Company, chromedp.NodeVisible, chromedp.ByQuery),
-		chromedp.Text(`.app-header .genre .value`, &result.Category, chromedp.NodeVisible, chromedp.ByQuery),
-		chromedp.Text(`.app-header .appid .value`, &result.PkgName, chromedp.NodeVisible, chromedp.ByQuery),
-		chromedp.Text(`.app-baseinfo .baseinfo-list li:nth-child(4) .info`, &result.Version, chromedp.NodeVisible, chromedp.ByQuery),
-		chromedp.Text(`.app-baseinfo .baseinfo-list li:nth-child(5) .info`, &result.Size, chromedp.NodeVisible, chromedp.ByQuery),
-	})
-
-	fmt.Println(fmt.Sprintf(`====%s%d`, baseURL, page))
-	fmt.Println(&result)
+	err := c.Run(*ctxt, parse(url, &result))
 
 	if err != nil {
 		log.Printf("get web page error: %s", err)
 		return
 	}
 
-	done := make(chan bool)
+	if result.Name == "" {
+		isBreak = true
+		return
+	}
 
-	go save(result, db, done)
+	fmt.Println(&result)
 
-	<-done
+	if err := crawler.Save(&result, db); err != nil {
+		log.Printf("save to mysql error: %s", err)
+	}
+	return
 }
 
-// 写入mysql
-func save(result models.APP, db *gorm.DB, done chan bool) error {
-	if err := db.Save(&result).Error; err != nil {
-		return err
+// parse 解析页面
+func parse(url string, result *models.APP) chromedp.Tasks {
+	ok := true
+	fmt.Println(url)
+	return chromedp.Tasks{
+		chromedp.Navigate(url),
+		chromedp.WaitVisible(`.breadcrumb-wrap>ul li:nth-child(5)`, chromedp.ByQuery),
+		chromedp.Text(`.breadcrumb-wrap>ul li:nth-child(5)`, &result.Name, chromedp.NodeVisible, chromedp.ByQuery),
+		chromedp.WaitVisible(`.app-header .auther .value`, chromedp.ByQuery),
+		chromedp.Text(`.app-header .auther .value`, &result.Company, chromedp.NodeVisible, chromedp.ByQuery),
+		chromedp.WaitVisible(`.app-header .genre .value`, chromedp.ByQuery),
+		chromedp.Text(`.app-header .genre .value`, &result.Category, chromedp.NodeVisible, chromedp.ByQuery),
+		chromedp.WaitVisible(`.app-baseinfo .baseinfo-list li:nth-child(4) .info`, chromedp.ByQuery),
+		chromedp.Text(`.app-baseinfo .baseinfo-list li:nth-child(4) .info`, &result.Version, chromedp.NodeVisible, chromedp.ByQuery),
+		chromedp.WaitVisible(`.app-baseinfo .baseinfo-list li:nth-child(5) .info`, chromedp.ByQuery),
+		chromedp.Text(`.app-baseinfo .baseinfo-list li:nth-child(5) .info`, &result.Size, chromedp.NodeVisible, chromedp.ByQuery),
+		chromedp.WaitVisible(`.app-icon`, chromedp.ByQuery),
+		chromedp.AttributeValue(`.app-icon`, `src`, &result.Img, &ok, chromedp.NodeVisible, chromedp.ByQuery),
 	}
-	done <- true
-	return nil
 }

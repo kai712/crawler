@@ -2,11 +2,15 @@ package crawler
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 
+	"crawler.github.com/models"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/jinzhu/gorm"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
 )
@@ -44,4 +48,31 @@ func GetHrefUrls(selector string, doc *goquery.Document) []string {
 		}
 	})
 	return urls
+}
+
+// ParseJSON 解析json
+// returnValue type 根据返回json自定义struct
+func ParseJSON(url string, returnValue interface{}) error {
+	resp, err := GetHTML(url)
+	if err != nil {
+		return err
+	}
+
+	body, _ := ioutil.ReadAll(resp)
+	bodystr := string(body)
+
+	if err := json.Unmarshal([]byte(bodystr), &returnValue); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Save 存入mysql
+func Save(result *models.APP, db *gorm.DB) error {
+	// 有则改，无则增
+	if err := db.Where("name = ?", result.Name).Assign(result).FirstOrCreate(&result).Error; err != nil {
+		return err
+	}
+	return nil
 }
