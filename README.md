@@ -1,5 +1,8 @@
 crawler 是一个基于Go语言编写的高并发的爬虫DEMO，有常见爬取的三种方式，包括“解析页面”、“解析异步ajax数据”、“SPA应用爬取方式”代码实现,并展示到前台。
 
+![](https://github.com/kai712/crawler/tree/master/static/crawler.gif)
+
+
 ### 本项目有以下几个核心功能块
 
 - [x] 基于Golang的三种常见爬取方式实现
