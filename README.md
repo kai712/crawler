@@ -16,7 +16,7 @@ crawler 是一个基于Go语言编写的高并发的爬虫DEMO，有常见爬取
 git clone git@github.com:kai712/crawler.git
 ```
 
-打开env.sh文件，配置自己的gopath
+mac下直接打开env.sh文件，配置自己的gopath
 ```
 // 项目本地路径
 export GOPATH=$HOME/ck/crawler
@@ -35,5 +35,6 @@ const (
 
 运行项目
 ```
+make install
 make start
 ```

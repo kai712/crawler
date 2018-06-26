@@ -37,7 +37,7 @@ func Work(db *gorm.DB) {
 
 	wg.Wait()
 
-	defer log.Printf("done")
+	log.Printf("done")
 }
 
 // getCategoryURLs 获取分类首页urls
@@ -82,9 +82,9 @@ func parsePage(detailURLs []string, db *gorm.DB) {
 		data := getDetails(doc)
 		log.Println(data)
 
-		if err := crawler.Save(data, db); err != nil {
-			log.Printf("save to mysql error: %s", err)
-		}
+		// if err := crawler.Save(data, db); err != nil {
+		// 	log.Printf("save to mysql error: %s", err)
+		// }
 	}
 }
 
