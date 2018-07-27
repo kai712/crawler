@@ -52,6 +52,7 @@ func getCategoryURLs() ([]string, error) {
 
 // 解析每个分类下的列表页
 func parseList(page int, url string, wg *sync.WaitGroup, db *gorm.DB) {
+
 	for {
 		newURL := fmt.Sprintf("%s/%d", url, page)
 		doc, err := getDoc(newURL)
@@ -68,6 +69,7 @@ func parseList(page int, url string, wg *sync.WaitGroup, db *gorm.DB) {
 		parsePage(detailURLs, db)
 		page++
 	}
+
 	wg.Done()
 }
 
@@ -81,10 +83,6 @@ func parsePage(detailURLs []string, db *gorm.DB) {
 		}
 		data := getDetails(doc)
 		log.Println(data)
-
-		// if err := crawler.Save(data, db); err != nil {
-		// 	log.Printf("save to mysql error: %s", err)
-		// }
 	}
 }
 
